@@ -57,9 +57,16 @@ func main() {
 		log.Fatal(err)
 	}
 
+	store, err := NewStore()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer store.Logger.Close()
+
 	app := Application{
 		Config: cfg,
-		Store:  NewStore(),
+		Store:  store,
 	}
 
 	mux := &http.ServeMux{}

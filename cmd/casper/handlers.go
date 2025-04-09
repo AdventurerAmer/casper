@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 )
 
@@ -13,16 +14,18 @@ func (app *Application) putHandler(w http.ResponseWriter, r *http.Request) {
 		writeBadRequest(w, errors.New("path value `key` is not specified"))
 		return
 	}
-	req := struct {
-		Value any `json:"value"`
-	}{}
-	err := readJSON(r, &req)
+	v, err := io.ReadAll(r.Body)
 	if err != nil {
-		writeBadRequest(w, err)
+		writeServerError(w, err)
 		return
 	}
-	app.Store.Put(key, req.Value)
-	writeJSON(w, req, http.StatusCreated)
+	app.Store.Put(key, v)
+	resp := struct {
+		Key string `json:"key"`
+	}{
+		Key: key,
+	}
+	writeJSON(w, resp, http.StatusCreated)
 }
 
 func (app *Application) getHandler(w http.ResponseWriter, r *http.Request) {
@@ -33,9 +36,10 @@ func (app *Application) getHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	v, ok := app.Store.Get(key)
 	resp := struct {
-		Exists bool `json:"exists"`
-		Value  any  `json:"value"`
-	}{Exists: ok, Value: v}
+		Exists bool   `json:"exists"`
+		Key    string `json:"key"`
+		Value  []byte `json:"value"`
+	}{Key: key, Exists: ok, Value: v}
 	writeJSON(w, resp, http.StatusOK)
 }
 
@@ -50,15 +54,6 @@ func (app *Application) deleteHandler(w http.ResponseWriter, r *http.Request) {
 		Key string `json:"key"`
 	}{Key: key}
 	writeJSON(w, resp, http.StatusOK)
-}
-
-func readJSON(r *http.Request, v any) error {
-	data, err := io.ReadAll(r.Body)
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal(data, v)
-	return err
 }
 
 func writeJSON(w http.ResponseWriter, v any, code int) error {
@@ -82,5 +77,6 @@ func writeBadRequest(w http.ResponseWriter, err error) {
 }
 
 func writeServerError(w http.ResponseWriter, err error) {
-	writeError(w, err, http.StatusInternalServerError)
+	writeError(w, errors.New("internal server error"), http.StatusInternalServerError)
+	log.Println(err)
 }
