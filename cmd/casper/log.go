@@ -84,15 +84,15 @@ func (l *WALogger) Delete(k string) {
 	l.LogEventCh <- LogEvent{Op: LogOpDelete, Key: k}
 }
 
-func (l *WALogger) ReadEntires() []LogEntry {
+func ReadEntires(file *os.File) []LogEntry {
 	var entires []LogEntry
-	info, err := l.File.Stat()
+	info, err := file.Stat()
 	if err != nil {
 		log.Fatal(err)
 	}
 	size := uint64(info.Size())
 	buf := make([]byte, size)
-	_, err = l.File.Read(buf)
+	_, err = file.Read(buf)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -128,7 +128,7 @@ func (l *WALogger) WriteLoop() {
 				return
 			}
 			seqNum := l.SequanceNum
-			l.SequanceNum += 1
+			l.SequanceNum++
 			binary.Write(&buf, binary.LittleEndian, seqNum)
 			binary.Write(&buf, binary.LittleEndian, event.Op)
 			keyLength := uint64(len(event.Key))

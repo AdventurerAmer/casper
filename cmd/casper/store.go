@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"sync"
 )
 
@@ -17,8 +16,8 @@ func NewStore() (*Store, error) {
 		return nil, err
 	}
 	m := make(map[string][]byte)
-	for _, e := range logger.ReadEntires() {
-		log.Printf("%s\n", e)
+	entries := ReadEntires(logger.File)
+	for _, e := range entries {
 		switch e.Op {
 		case LogOpPut:
 			m[e.Key] = e.Value
@@ -26,6 +25,7 @@ func NewStore() (*Store, error) {
 			delete(m, e.Key)
 		}
 	}
+	logger.SequanceNum = uint64(len(entries))
 	go logger.WriteLoop()
 	return &Store{
 		M:      m,
